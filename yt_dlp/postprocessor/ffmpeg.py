@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import time
+import webvtt
 
 from .common import PostProcessor
 from ..compat import functools, imghdr
@@ -352,7 +353,7 @@ class FFmpegPostProcessor(PostProcessor):
             cmd += itertools.chain.from_iterable(
                 make_args(path, list(opts), arg_type, i + 1)
                 for i, (path, opts) in enumerate(path_opts) if path)
-
+        # jc debug
         self.write_debug('ffmpeg command line: %s' % shell_quote(cmd))
         _, stderr, returncode = Popen.run(
             cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
@@ -621,7 +622,14 @@ class FFmpegEmbedSubtitlePP(FFmpegPostProcessor):
             elif ext != 'webm' or ext == 'webm' and sub_ext == 'vtt':
                 sub_langs.append(lang)
                 sub_names.append(sub_info.get('name'))
-                sub_filenames.append(sub_info['filepath'])
+                # jc: forcing srt
+                s = sub_info['filepath']
+                vtt = webvtt.read(s)
+                vtt.save_as_srt()
+                replaced = re.sub('.vtt', '.srt', s)
+                #sub_filenames.append(sub_info['filepath'])
+                self.write_debug('JC vtt2srt: %s' % lang)
+                sub_filenames.append(replaced)
             else:
                 if not webm_vtt_warn and ext == 'webm' and sub_ext != 'vtt':
                     webm_vtt_warn = True
